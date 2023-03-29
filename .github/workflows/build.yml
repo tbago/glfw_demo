@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v3
@@ -23,6 +23,10 @@ jobs:
       - name: Install Dependencies on Ubuntu
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install libglfw3 && sudo apt-get install libglfw3-dev && sudo apt-get install libglew-dev
+
+      - name: Install Dependencies on macOS
+        if: runner.os == 'macOS'
+        run: sudo brew update && sudo brew install glfw && sudo brew install glew
 
       - name: Configure CMake
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
