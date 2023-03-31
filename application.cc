@@ -10,6 +10,12 @@ struct ShaderProgramSource {
     std::string fragment_shader;
 };
 
+static void DebugProc(GLenum source, GLenum type, GLuint id, GLenum severity,
+                      GLsizei length, const GLchar *message,
+                      const void *userParam) {
+    // std::cout << message << std::endl;
+}
+
 static ShaderProgramSource ParseShaders(const std::string &filepath) {
     std::ifstream stream(filepath);
 
@@ -29,13 +35,13 @@ static ShaderProgramSource ParseShaders(const std::string &filepath) {
             } else if (line.find("fragment") != std::string::npos) {
                 type = ShaderType::FRAGMENT;
             }
-        }
-        else {
+        } else {
             string_stream[type] << line << "\n";
         }
     }
 
-    return {string_stream[ShaderType::VERTEX].str(), string_stream[ShaderType::FRAGMENT].str()};
+    return {string_stream[ShaderType::VERTEX].str(),
+            string_stream[ShaderType::FRAGMENT].str()};
 }
 
 static unsigned int CompileShader(const std::string &source,
@@ -109,9 +115,11 @@ int main(void) {
         return -1;
     }
 
-    std::cout << glGetString(GL_VERSION) << std::endl;
+    if (glDebugMessageCallback != NULL) {
+        glDebugMessageCallback(DebugProc, nullptr);
+    }
 
-    float positions[] = {-0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f};
+    std::cout << glGetString(GL_VERSION) << std::endl;
 
     unsigned int VBO, VAO;
     glGenBuffers(1, &VBO);
@@ -121,24 +129,45 @@ int main(void) {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+
+    // clang-format off
+    float positions[] = {
+        -0.5f, -0.5f,
+         0.5f, -0.5f,
+         0.5f,  0.5f,
+        -0.5f,  0.5f
+    };
+
+    unsigned int indices[] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+    // clang-format on
 
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions,
+                 GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
+    unsigned int index_buffer_object;
+    glGenBuffers(1, &index_buffer_object);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices,
+                 GL_STATIC_DRAW);
+
     ShaderProgramSource source = ParseShaders("resource/shader/shader.shader");
     // std::cout << "Vertex shader" << std::endl;
     // std::cout << source.vertex_shader << std::endl;
-   
+
     // std::cout << "Fragment shader" << std::endl;
     // std::cout << source.fragment_shader << std::endl;
-    
-    unsigned int shader = CreateShader(source.vertex_shader, source.fragment_shader); 
+
+    unsigned int shader =
+        CreateShader(source.vertex_shader, source.fragment_shader);
     glUseProgram(shader);
 
     /* Loop until the user closes the window */
@@ -146,7 +175,8 @@ int main(void) {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_INT, nullptr);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
