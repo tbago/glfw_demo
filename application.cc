@@ -13,7 +13,17 @@ struct ShaderProgramSource {
 static void DebugProc(GLenum source, GLenum type, GLuint id, GLenum severity,
                       GLsizei length, const GLchar *message,
                       const void *userParam) {
-    // std::cout << message << std::endl;
+    std::cout << message << std::endl;
+}
+
+static void GLClearError() {
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static void GLCheckError() {
+    while (GLenum error = glGetError()) {
+        std::cout << "GLError " << error<< std::endl;
+    }
 }
 
 static ShaderProgramSource ParseShaders(const std::string &filepath) {
@@ -170,13 +180,26 @@ int main(void) {
         CreateShader(source.vertex_shader, source.fragment_shader);
     glUseProgram(shader);
 
+    int location = glGetUniformLocation(shader, "u_color");
+    assert(location != -1);
+
+    float r_value = 0.05f;
+    float increase = 0.05f;
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)) {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // GLClearError();
+        glUniform4f(location, r_value, 0.3f, 0.0f, 1.0f);
         // glDrawArrays(GL_TRIANGLES, 0, 6);
-        glDrawElements(GL_TRIANGLES, 6, GL_INT, nullptr);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        // GLCheckError();
+        if (r_value >= 1.0f || r_value <= 0.0f) {
+            increase = increase * -1;
+        }
+        r_value += increase;
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
